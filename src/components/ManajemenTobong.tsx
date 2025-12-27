@@ -1,56 +1,98 @@
-import { useState } from 'react';
-import { Search, Plus, Edit, Trash2, Eye, X } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Search, Plus, Edit, Trash2, Eye, X, Loader2 } from 'lucide-react';
 import { Modal } from './Modal';
+import axiosClient from '../api/axiosClient'; // Pastikan path ini benar!
 
+// --- PERBAIKAN 1: Interface harus sinkron dengan BE ---
 interface TobongData {
-  id: number;
-  namaTobong: string;
-  tanggalPembuatan: string;
+  tobong_id: number; // Menggunakan ID dari BE
+  nama_tobong: string; // Menggunakan nama_tobong (snake_case)
+  tanggal_pembuatan: string; // Dari BE
   lokasi: string;
   kapasitas: number;
-  kapasitasAbu: number;
-  status: 'tersedia' | 'penuh' | 'maintenance';
+  kapasitas_abu: number;
+  // Menyesuaikan status: 'aktif' (tersedia), 'perbaikan' (maintenance), 'non-aktif' (penuh)
+  status_operasional: 'aktif' | 'perbaikan' | 'non-aktif'; 
+  created_at: string;
+  updated_at: string;
 }
 
 interface ManajemenTobongProps {
   showToast: (message: string, type: 'success' | 'error' | 'warning') => void;
 }
 
-export function ManajemenTobong({ showToast }: ManajemenTobongProps) {
-  const [tobongList, setTobongList] = useState<TobongData[]>([
-    { id: 1, namaTobong: 'Tobong A', tanggalPembuatan: '2024-01-15', lokasi: 'Area Utara', kapasitas: 100, kapasitasAbu: 25, status: 'tersedia' },
-    { id: 2, namaTobong: 'Tobong B', tanggalPembuatan: '2024-02-20', lokasi: 'Area Selatan', kapasitas: 150, kapasitasAbu: 30, status: 'tersedia' },
-    { id: 3, namaTobong: 'Tobong C', tanggalPembuatan: '2024-03-10', lokasi: 'Area Timur', kapasitas: 120, kapasitasAbu: 28, status: 'maintenance' },
-    { id: 4, namaTobong: 'Tobong D', tanggalPembuatan: '2024-04-05', lokasi: 'Area Barat', kapasitas: 80, kapasitasAbu: 20, status: 'tersedia' },
-    { id: 5, namaTobong: 'Tobong E', tanggalPembuatan: '2024-05-12', lokasi: 'Area Tengah', kapasitas: 200, kapasitasAbu: 40, status: 'penuh' },
-  ]);
+const getStatusBadge = (status: string) => {
+  const styles = {
+    aktif: 'bg-green-100 text-green-700',
+    'non-aktif': 'bg-orange-100 text-orange-700', // Penuh -> non-aktif
+    perbaikan: 'bg-red-100 text-red-700', // Maintenance -> perbaikan
+  };
+  return styles[status as keyof typeof styles] || 'bg-gray-100 text-gray-700';
+};
 
+// --- Helper untuk konversi FE (tersedia/penuh/maintenance) ke BE (aktif/non-aktif/perbaikan) ---
+const mapStatusToBE = (feStatus: string) => {
+    switch (feStatus) {
+        case 'tersedia': return 'aktif';
+        case 'penuh': return 'non-aktif';
+        case 'maintenance': return 'perbaikan';
+        default: return 'aktif';
+    }
+};
+
+export function ManajemenTobong({ showToast }: ManajemenTobongProps) {
+  const [tobongList, setTobongList] = useState<TobongData[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit' | 'detail'>('add');
   const [selectedTobong, setSelectedTobong] = useState<TobongData | null>(null);
   const [formData, setFormData] = useState({
-    namaTobong: '',
+    nama_tobong: '', // PERBAIKAN: snake_case
     lokasi: '',
     kapasitas: '',
-    kapasitasAbu: '',
-    status: 'tersedia' as 'tersedia' | 'penuh' | 'maintenance',
+    kapasitas_abu: '',
+    tanggal_pembuatan: new Date().toISOString().split('T')[0], // Tambahkan tanggal pembuatan
+    status_operasional: 'aktif' as 'aktif' | 'perbaikan' | 'non-aktif', // PERBAIKAN: enum BE
   });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+
+  // --- FUNGSI ASINKRON: FETCH DATA ---
+  const fetchTobong = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await axiosClient.get('/tobong'); // Endpoint sesuai Route::apiResource('tobong')
+      setTobongList(response.data);
+    } catch (error) {
+      showToast('Gagal memuat data tobong.', 'error');
+      console.error("Fetch Error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [showToast]);
+
+  useEffect(() => {
+    fetchTobong();
+  }, [fetchTobong]);
+
 
   const filteredTobong = tobongList.filter(tobong =>
-    tobong.namaTobong.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    tobong.nama_tobong.toLowerCase().includes(searchQuery.toLowerCase()) ||
     tobong.lokasi.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleAdd = () => {
     setModalMode('add');
     setFormData({
-      namaTobong: '',
+      nama_tobong: '',
       lokasi: '',
       kapasitas: '',
-      kapasitasAbu: '',
-      status: 'tersedia',
+      kapasitas_abu: '',
+      tanggal_pembuatan: new Date().toISOString().split('T')[0],
+      status_operasional: 'aktif',
     });
+    setSelectedTobong(null);
     setIsModalOpen(true);
   };
 
@@ -58,11 +100,12 @@ export function ManajemenTobong({ showToast }: ManajemenTobongProps) {
     setModalMode('edit');
     setSelectedTobong(tobong);
     setFormData({
-      namaTobong: tobong.namaTobong,
+      nama_tobong: tobong.nama_tobong,
       lokasi: tobong.lokasi,
       kapasitas: tobong.kapasitas.toString(),
-      kapasitasAbu: tobong.kapasitasAbu.toString(),
-      status: tobong.status,
+      kapasitas_abu: tobong.kapasitas_abu.toString(),
+      tanggal_pembuatan: tobong.tanggal_pembuatan,
+      status_operasional: tobong.status_operasional,
     });
     setIsModalOpen(true);
   };
@@ -73,61 +116,65 @@ export function ManajemenTobong({ showToast }: ManajemenTobongProps) {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: number) => {
-    if (confirm('Apakah Anda yakin ingin menghapus tobong ini?')) {
-      setTobongList(tobongList.filter(t => t.id !== id));
+  // --- FUNGSI ASINKRON: DELETE DATA ---
+  const handleDelete = async (id: number) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus tobong ini?')) {
+      return;
+    }
+    
+    try {
+      await axiosClient.delete(`/tobong/${id}`);
       showToast('Tobong berhasil dihapus', 'success');
+      fetchTobong(); // Refresh data
+    } catch (error) {
+      showToast('Gagal menghapus data.', 'error');
+      console.error("Delete Error:", error);
     }
   };
 
-  const handleSubmit = () => {
-    if (!formData.namaTobong || !formData.lokasi || !formData.kapasitas) {
-      showToast('Mohon lengkapi semua field', 'warning');
+  // --- FUNGSI ASINKRON: SUBMIT (ADD / EDIT) ---
+  const handleSubmit = async () => {
+    if (!formData.nama_tobong || !formData.lokasi || !formData.kapasitas) {
+      showToast('Mohon lengkapi Nama Tobong, Lokasi, dan Kapasitas.', 'warning');
       return;
     }
 
-    if (modalMode === 'add') {
-      const newTobong: TobongData = {
-        id: Math.max(...tobongList.map(t => t.id)) + 1,
-        namaTobong: formData.namaTobong,
-        tanggalPembuatan: new Date().toISOString().split('T')[0],
-        lokasi: formData.lokasi,
-        kapasitas: Number(formData.kapasitas),
-        kapasitasAbu: Number(formData.kapasitasAbu),
-        status: formData.status,
-      };
-      setTobongList([...tobongList, newTobong]);
-      showToast('Tobong berhasil ditambahkan', 'success');
-    } else if (modalMode === 'edit' && selectedTobong) {
-      setTobongList(tobongList.map(t =>
-        t.id === selectedTobong.id
-          ? {
-              ...t,
-              namaTobong: formData.namaTobong,
-              lokasi: formData.lokasi,
-              kapasitas: Number(formData.kapasitas),
-              kapasitasAbu: Number(formData.kapasitasAbu),
-              status: formData.status,
-            }
-          : t
-      ));
-      showToast('Data tobong berhasil diperbarui', 'success');
+    setIsSubmitting(true);
+    const dataToSend = {
+      ...formData,
+      kapasitas: Number(formData.kapasitas),
+      kapasitas_abu: Number(formData.kapasitas_abu),
+    };
+
+    try {
+      if (modalMode === 'add') {
+        // POST request
+        await axiosClient.post('/tobong', dataToSend);
+        showToast('Tobong berhasil ditambahkan', 'success');
+      } else if (modalMode === 'edit' && selectedTobong) {
+        // PUT request
+        await axiosClient.put(`/tobong/${selectedTobong.tobong_id}`, dataToSend);
+        showToast('Data tobong berhasil diperbarui', 'success');
+      }
+      
+      setIsModalOpen(false);
+      fetchTobong(); // Refresh data
+
+    } catch (error: any) {
+      const msg = error.response?.data?.message || 'Terjadi kesalahan saat menyimpan data.';
+      showToast(msg, 'error');
+      console.error("Submit Error:", error);
+      
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsModalOpen(false);
   };
 
-  const getStatusBadge = (status: string) => {
-    const styles = {
-      tersedia: 'bg-green-100 text-green-700',
-      penuh: 'bg-orange-100 text-orange-700',
-      maintenance: 'bg-red-100 text-red-700',
-    };
-    return styles[status as keyof typeof styles] || '';
-  };
+  // ... (getStatusBadge function remains the same, adjusted for BE enum names) ...
 
   return (
     <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
-      {/* Header */}
+      {/* ... Header & Filters & Actions remain the same ... */}
       <div className="mb-6">
         <h1 className="text-gray-900 mb-2">Manajemen Tobong</h1>
         <p className="text-gray-600">Kelola data tobong pembakaran sampah</p>
@@ -158,7 +205,7 @@ export function ManajemenTobong({ showToast }: ManajemenTobongProps) {
           </button>
         </div>
       </div>
-
+      
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
@@ -166,75 +213,81 @@ export function ManajemenTobong({ showToast }: ManajemenTobongProps) {
           <div className="text-gray-900">{tobongList.length}</div>
         </div>
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <div className="text-gray-600 text-sm mb-1">Tersedia</div>
-          <div className="text-green-600">{tobongList.filter(t => t.status === 'tersedia').length}</div>
+          <div className="text-gray-600 text-sm mb-1">Tersedia (Aktif)</div>
+          <div className="text-green-600">{tobongList.filter(t => t.status_operasional === 'aktif').length}</div>
         </div>
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <div className="text-gray-600 text-sm mb-1">Maintenance</div>
-          <div className="text-red-600">{tobongList.filter(t => t.status === 'maintenance').length}</div>
+          <div className="text-gray-600 text-sm mb-1">Maintenance (Perbaikan)</div>
+          <div className="text-red-600">{tobongList.filter(t => t.status_operasional === 'perbaikan').length}</div>
         </div>
       </div>
 
       {/* Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-4 text-left text-gray-700">Nama Tobong</th>
-                <th className="px-6 py-4 text-left text-gray-700">Tanggal Pembuatan</th>
-                <th className="px-6 py-4 text-left text-gray-700">Lokasi</th>
-                <th className="px-6 py-4 text-left text-gray-700">Kapasitas</th>
-                <th className="px-6 py-4 text-left text-gray-700">Kapasitas Abu</th>
-                <th className="px-6 py-4 text-left text-gray-700">Status</th>
-                <th className="px-6 py-4 text-left text-gray-700">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filteredTobong.map((tobong) => (
-                <tr key={tobong.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-gray-900">{tobong.namaTobong}</td>
-                  <td className="px-6 py-4 text-gray-600">{new Date(tobong.tanggalPembuatan).toLocaleDateString('id-ID')}</td>
-                  <td className="px-6 py-4 text-gray-600">{tobong.lokasi}</td>
-                  <td className="px-6 py-4 text-gray-600">{tobong.kapasitas} Kg</td>
-                  <td className="px-6 py-4 text-gray-600">{tobong.kapasitasAbu} Kg</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-3 py-1 rounded-full text-sm ${getStatusBadge(tobong.status)}`}>
-                      {tobong.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleDetail(tobong)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="Detail"
-                      >
-                        <Eye className="w-4 h-4" strokeWidth={1.5} />
-                      </button>
-                      <button
-                        onClick={() => handleEdit(tobong)}
-                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                        title="Edit"
-                      >
-                        <Edit className="w-4 h-4" strokeWidth={1.5} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(tobong.id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Hapus"
-                      >
-                        <Trash2 className="w-4 h-4" strokeWidth={1.5} />
-                      </button>
-                    </div>
-                  </td>
+        {isLoading ? (
+            <div className="text-center py-12 text-gray-500 flex items-center justify-center gap-2">
+                <Loader2 className="w-5 h-5 animate-spin" /> Memuat data...
+            </div>
+        ) : (
+            <div className="overflow-x-auto">
+            <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                    <th className="px-6 py-4 text-left text-gray-700">Nama Tobong</th>
+                    <th className="px-6 py-4 text-left text-gray-700">Tanggal Pembuatan</th>
+                    <th className="px-6 py-4 text-left text-gray-700">Lokasi</th>
+                    <th className="px-6 py-4 text-left text-gray-700">Kapasitas</th>
+                    <th className="px-6 py-4 text-left text-gray-700">Kapasitas Abu</th>
+                    <th className="px-6 py-4 text-left text-gray-700">Status</th>
+                    <th className="px-6 py-4 text-left text-gray-700">Aksi</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {filteredTobong.length === 0 && (
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                {filteredTobong.map((tobong) => (
+                    <tr key={tobong.tobong_id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 text-gray-900">{tobong.nama_tobong}</td>
+                    <td className="px-6 py-4 text-gray-600">{new Date(tobong.tanggal_pembuatan).toLocaleDateString('id-ID')}</td>
+                    <td className="px-6 py-4 text-gray-600">{tobong.lokasi}</td>
+                    <td className="px-6 py-4 text-gray-600">{tobong.kapasitas} Kg</td>
+                    <td className="px-6 py-4 text-gray-600">{tobong.kapasitas_abu} Kg</td>
+                    <td className="px-6 py-4">
+                        <span className={`px-3 py-1 rounded-full text-sm ${getStatusBadge(tobong.status_operasional)}`}>
+                        {tobong.status_operasional}
+                        </span>
+                    </td>
+                    <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => handleDetail(tobong)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Detail"
+                        >
+                            <Eye className="w-4 h-4" strokeWidth={1.5} />
+                        </button>
+                        <button
+                            onClick={() => handleEdit(tobong)}
+                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                            title="Edit"
+                        >
+                            <Edit className="w-4 h-4" strokeWidth={1.5} />
+                        </button>
+                        <button
+                            onClick={() => handleDelete(tobong.tobong_id)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Hapus"
+                        >
+                            <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+                        </button>
+                        </div>
+                    </td>
+                    </tr>
+                ))}
+                </tbody>
+            </table>
+            </div>
+        )}
+        
+        {!isLoading && filteredTobong.length === 0 && (
           <div className="text-center py-12 text-gray-500">
             Tidak ada data tobong ditemukan
           </div>
@@ -252,7 +305,7 @@ export function ManajemenTobong({ showToast }: ManajemenTobongProps) {
                 {modalMode === 'edit' && 'Edit Data Tobong'}
                 {modalMode === 'detail' && 'Detail Tobong'}
               </h2>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-lg" disabled={isSubmitting}>
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
@@ -261,13 +314,14 @@ export function ManajemenTobong({ showToast }: ManajemenTobongProps) {
             <div className="p-6">
               {modalMode === 'detail' && selectedTobong ? (
                 <div className="space-y-4">
+                  {/* ... (Detail content uses selectedTobong.nama_tobong, selectedTobong.status_operasional, dll.) ... */}
                   <div>
                     <label className="block text-gray-600 text-sm mb-1">Nama Tobong</label>
-                    <p className="text-gray-900">{selectedTobong.namaTobong}</p>
+                    <p className="text-gray-900">{selectedTobong.nama_tobong}</p>
                   </div>
                   <div>
                     <label className="block text-gray-600 text-sm mb-1">Tanggal Pembuatan</label>
-                    <p className="text-gray-900">{new Date(selectedTobong.tanggalPembuatan).toLocaleDateString('id-ID')}</p>
+                    <p className="text-gray-900">{new Date(selectedTobong.tanggal_pembuatan).toLocaleDateString('id-ID')}</p>
                   </div>
                   <div>
                     <label className="block text-gray-600 text-sm mb-1">Lokasi</label>
@@ -279,23 +333,24 @@ export function ManajemenTobong({ showToast }: ManajemenTobongProps) {
                   </div>
                   <div>
                     <label className="block text-gray-600 text-sm mb-1">Kapasitas Abu</label>
-                    <p className="text-gray-900">{selectedTobong.kapasitasAbu} Kg</p>
+                    <p className="text-gray-900">{selectedTobong.kapasitas_abu} Kg</p>
                   </div>
                   <div>
                     <label className="block text-gray-600 text-sm mb-1">Status Operasional</label>
-                    <span className={`inline-block px-3 py-1 rounded-full text-sm ${getStatusBadge(selectedTobong.status)}`}>
-                      {selectedTobong.status}
+                    <span className={`inline-block px-3 py-1 rounded-full text-sm ${getStatusBadge(selectedTobong.status_operasional)}`}>
+                      {selectedTobong.status_operasional}
                     </span>
                   </div>
                 </div>
               ) : (
                 <div className="space-y-4">
+                  {/* Form fields use formData.nama_tobong, formData.status_operasional, etc. */}
                   <div>
                     <label className="block text-gray-700 mb-2">Nama Tobong</label>
                     <input
                       type="text"
-                      value={formData.namaTobong}
-                      onChange={(e) => setFormData({ ...formData, namaTobong: e.target.value })}
+                      value={formData.nama_tobong}
+                      onChange={(e) => setFormData({ ...formData, nama_tobong: e.target.value })}
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4C9876]"
                       placeholder="Contoh: Tobong F"
                     />
@@ -333,15 +388,16 @@ export function ManajemenTobong({ showToast }: ManajemenTobongProps) {
                   <div>
                     <label className="block text-gray-700 mb-2">Status Operasional</label>
                     <select
-                      value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                      value={formData.status_operasional}
+                      onChange={(e) => setFormData({ ...formData, status_operasional: e.target.value as any })}
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4C9876]"
                     >
-                      <option value="tersedia">Tersedia</option>
-                      <option value="penuh">Penuh</option>
-                      <option value="maintenance">Maintenance</option>
+                      <option value="aktif">Aktif (Tersedia)</option>
+                      <option value="non-aktif">Non-Aktif (Penuh)</option>
+                      <option value="perbaikan">Perbaikan (Maintenance)</option>
                     </select>
                   </div>
+                  <input type="hidden" value={formData.tanggal_pembuatan} /> {/* Tanggal Pembuatan diset saat add/edit */}
                 </div>
               )}
             </div>
@@ -352,14 +408,17 @@ export function ManajemenTobong({ showToast }: ManajemenTobongProps) {
                 <button
                   onClick={() => setIsModalOpen(false)}
                   className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
+                  disabled={isSubmitting}
                 >
                   Batal
                 </button>
                 <button
                   onClick={handleSubmit}
-                  className="px-6 py-2.5 bg-[#4C9876] text-white rounded-xl hover:bg-[#3d7a5e] transition-colors"
+                  className="px-6 py-2.5 bg-[#4C9876] text-white rounded-xl hover:bg-[#3d7a5e] transition-colors flex items-center gap-2"
+                  disabled={isSubmitting}
                 >
-                  {modalMode === 'add' ? 'Tambah' : 'Simpan'}
+                    {isSubmitting && <Loader2 className="w-5 h-5 animate-spin" strokeWidth={1.5} />}
+                    {modalMode === 'add' ? 'Tambah' : 'Simpan'}
                 </button>
               </div>
             )}
