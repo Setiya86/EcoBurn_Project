@@ -38,16 +38,6 @@ export function Sidebar({ isOpen, isLoggedIn, currentPage, onNavigate, onLogout,
         />
       )}
 
-
-      {/* Overlay hanya tampil di mobile */}
-      {/* {isOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 block lg:hidden"
-          onClick={onClose}
-        />
-      )} */}
-
-
       {/* Sidebar */}
       <aside
         className={`fixed top-0 left-0 h-full w-64 bg-white shadow-lg z-50 transform transition-transform duration-300 ${
@@ -57,7 +47,17 @@ export function Sidebar({ isOpen, isLoggedIn, currentPage, onNavigate, onLogout,
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="h-16 flex items-center justify-between px-4 border-b border-gray-100">
-            <span className="text-gray-800">Menu</span>
+            <div className="flex items-center gap-2">
+              <img 
+                src="/EcoBurn_Logo.png"
+                alt="EcoBurn Logo"
+                className="w-10 h-10 object-contain"
+              />
+              <span className="text-gray-800 font-medium">
+                Menu
+              </span>
+            </div>
+
             <button
               onClick={onClose}
               className="lg:hidden p-2 hover:bg-gray-100 rounded-xl transition-colors"

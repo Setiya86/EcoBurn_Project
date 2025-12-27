@@ -54,18 +54,54 @@ export default function App() {
     setIsSidebarOpen(false);
   };
 
-  const renderPage = () => {
-    // Jika belum login, selalu tampilkan halaman Login
-    if (!isLoggedIn) {
-        return <LoginPage onLoginSuccess={handleLoginSuccess} />;
-    }
+  // const renderPage = () => {
+  //   // Jika belum login, selalu tampilkan halaman Login
+  //   if (!isLoggedIn) {
+  //       return <LoginPage onLoginSuccess={handleLoginSuccess} />;
+  //   }
     
+  //   switch (currentPage) {
+  //     case 'home':
+  //       return <DashboardKonsumen />;
+  //     case 'tentang':
+  //       return <TentangEcoBurn />;
+  //     // Case 'login' sudah tidak perlu, karena logic ada di atas (if (!isLoggedIn))
+  //     case 'dashboard-admin':
+  //       return <DashboardAdmin />;
+  //     case 'anggota':
+  //       return <Anggota showToast={showToast} />;
+  //     case 'keuangan':
+  //       return <Keuangan showToast={showToast} />;
+  //     case 'pembakaran':
+  //       return <PembakaranSampah showToast={showToast} />;
+  //     case 'tobong':
+  //       return <ManajemenTobong showToast={showToast} />;
+  //     case 'laporan':
+  //       return <LaporanPembakaran />;
+  //     case 'profil':
+  //       return <ProfilAdmin profile={adminProfile} setProfile={setAdminProfile} showToast={showToast} />;
+  //     default:
+  //       return <DashboardAdmin />; // Default ke dashboard admin jika sudah login
+  //   }
+  // };
+
+  const renderPage = () => {
+    // HALAMAN PUBLIK (BOLEH DIAKSES TANPA LOGIN)
+    if (!isLoggedIn) {
+      switch (currentPage) {
+        case 'home':
+          return <DashboardKonsumen />;
+        case 'tentang':
+          return <TentangEcoBurn />;
+        case 'login':
+          return <LoginPage onLoginSuccess={handleLoginSuccess} />;
+        default:
+          return <DashboardKonsumen />;
+      }
+    }
+
+    // HALAMAN ADMIN (BUTUH LOGIN)
     switch (currentPage) {
-      case 'home':
-        return <DashboardKonsumen />;
-      case 'tentang':
-        return <TentangEcoBurn />;
-      // Case 'login' sudah tidak perlu, karena logic ada di atas (if (!isLoggedIn))
       case 'dashboard-admin':
         return <DashboardAdmin />;
       case 'anggota':
@@ -81,9 +117,10 @@ export default function App() {
       case 'profil':
         return <ProfilAdmin profile={adminProfile} setProfile={setAdminProfile} showToast={showToast} />;
       default:
-        return <DashboardAdmin />; // Default ke dashboard admin jika sudah login
+        return <DashboardAdmin />;
     }
   };
+
 
   // Cek status login saat awal render (misalnya dari token di localStorage)
   // Anda bisa menambahkan logic di sini jika ingin persistensi status login

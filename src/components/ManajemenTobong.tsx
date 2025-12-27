@@ -10,7 +10,7 @@ interface TobongData {
   tanggal_pembuatan: string; // Dari BE
   lokasi: string;
   kapasitas: number;
-  kapasitas_abu: number;
+  // kapasitas_abu: number;
   // Menyesuaikan status: 'aktif' (tersedia), 'perbaikan' (maintenance), 'non-aktif' (penuh)
   status_operasional: 'aktif' | 'perbaikan' | 'non-aktif'; 
   created_at: string;
@@ -50,7 +50,7 @@ export function ManajemenTobong({ showToast }: ManajemenTobongProps) {
     nama_tobong: '', // PERBAIKAN: snake_case
     lokasi: '',
     kapasitas: '',
-    kapasitas_abu: '',
+    // kapasitas_abu: '',
     tanggal_pembuatan: new Date().toISOString().split('T')[0], // Tambahkan tanggal pembuatan
     status_operasional: 'aktif' as 'aktif' | 'perbaikan' | 'non-aktif', // PERBAIKAN: enum BE
   });
@@ -88,7 +88,7 @@ export function ManajemenTobong({ showToast }: ManajemenTobongProps) {
       nama_tobong: '',
       lokasi: '',
       kapasitas: '',
-      kapasitas_abu: '',
+      // kapasitas_abu: '',
       tanggal_pembuatan: new Date().toISOString().split('T')[0],
       status_operasional: 'aktif',
     });
@@ -103,7 +103,7 @@ export function ManajemenTobong({ showToast }: ManajemenTobongProps) {
       nama_tobong: tobong.nama_tobong,
       lokasi: tobong.lokasi,
       kapasitas: tobong.kapasitas.toString(),
-      kapasitas_abu: tobong.kapasitas_abu.toString(),
+      // kapasitas_abu: tobong.kapasitas_abu.toString(),
       tanggal_pembuatan: tobong.tanggal_pembuatan,
       status_operasional: tobong.status_operasional,
     });
@@ -143,7 +143,7 @@ export function ManajemenTobong({ showToast }: ManajemenTobongProps) {
     const dataToSend = {
       ...formData,
       kapasitas: Number(formData.kapasitas),
-      kapasitas_abu: Number(formData.kapasitas_abu),
+      // kapasitas_abu: Number(formData.kapasitas_abu),
     };
 
     try {
@@ -237,7 +237,7 @@ export function ManajemenTobong({ showToast }: ManajemenTobongProps) {
                     <th className="px-6 py-4 text-left text-gray-700">Tanggal Pembuatan</th>
                     <th className="px-6 py-4 text-left text-gray-700">Lokasi</th>
                     <th className="px-6 py-4 text-left text-gray-700">Kapasitas</th>
-                    <th className="px-6 py-4 text-left text-gray-700">Kapasitas Abu</th>
+                    {/* <th className="px-6 py-4 text-left text-gray-700">Kapasitas Abu</th> */}
                     <th className="px-6 py-4 text-left text-gray-700">Status</th>
                     <th className="px-6 py-4 text-left text-gray-700">Aksi</th>
                 </tr>
@@ -249,7 +249,7 @@ export function ManajemenTobong({ showToast }: ManajemenTobongProps) {
                     <td className="px-6 py-4 text-gray-600">{new Date(tobong.tanggal_pembuatan).toLocaleDateString('id-ID')}</td>
                     <td className="px-6 py-4 text-gray-600">{tobong.lokasi}</td>
                     <td className="px-6 py-4 text-gray-600">{tobong.kapasitas} Kg</td>
-                    <td className="px-6 py-4 text-gray-600">{tobong.kapasitas_abu} Kg</td>
+                    {/* <td className="px-6 py-4 text-gray-600">{tobong.kapasitas_abu} Kg</td> */}
                     <td className="px-6 py-4">
                         <span className={`px-3 py-1 rounded-full text-sm ${getStatusBadge(tobong.status_operasional)}`}>
                         {tobong.status_operasional}
@@ -331,10 +331,10 @@ export function ManajemenTobong({ showToast }: ManajemenTobongProps) {
                     <label className="block text-gray-600 text-sm mb-1">Kapasitas Sampah</label>
                     <p className="text-gray-900">{selectedTobong.kapasitas} Kg</p>
                   </div>
-                  <div>
+                  {/* <div>
                     <label className="block text-gray-600 text-sm mb-1">Kapasitas Abu</label>
                     <p className="text-gray-900">{selectedTobong.kapasitas_abu} Kg</p>
-                  </div>
+                  </div> */}
                   <div>
                     <label className="block text-gray-600 text-sm mb-1">Status Operasional</label>
                     <span className={`inline-block px-3 py-1 rounded-full text-sm ${getStatusBadge(selectedTobong.status_operasional)}`}>
@@ -375,7 +375,7 @@ export function ManajemenTobong({ showToast }: ManajemenTobongProps) {
                       placeholder="Masukkan kapasitas"
                     />
                   </div>
-                  <div>
+                  {/* <div>
                     <label className="block text-gray-700 mb-2">Kapasitas Abu (Kg)</label>
                     <input
                       type="number"
@@ -384,7 +384,7 @@ export function ManajemenTobong({ showToast }: ManajemenTobongProps) {
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4C9876]"
                       placeholder="Masukkan kapasitas abu"
                     />
-                  </div>
+                  </div> */}
                   <div>
                     <label className="block text-gray-700 mb-2">Status Operasional</label>
                     <select
