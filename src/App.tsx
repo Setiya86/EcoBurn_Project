@@ -31,19 +31,18 @@ export default function App() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleLogin = (username: string, password: string) => {
-    // Mock login
-    if (username === 'admin' && password === 'admin123') {
-      setIsLoggedIn(true);
-      setCurrentPage('dashboard-admin');
-      showToast('Login berhasil! Selamat datang di EcoBurn', 'success');
-      return true;
-    }
-    showToast('Username atau password salah', 'error');
-    return false;
+  // FUNGSI INI MENGGANTIKAN handleLogin MOCK yang lama.
+  // Dipanggil OLEH LoginPage setelah API Login berhasil menyimpan token.
+  const handleLoginSuccess = () => {
+    setIsLoggedIn(true);
+    setCurrentPage('dashboard-admin');
+    showToast('Login berhasil! Selamat datang di EcoBurn', 'success');
   };
 
   const handleLogout = () => {
+    // Tambahkan penghapusan token saat logout
+    localStorage.removeItem('access_token');
+    
     setIsLoggedIn(false);
     setCurrentPage('home');
     setIsSidebarOpen(false);
@@ -56,13 +55,17 @@ export default function App() {
   };
 
   const renderPage = () => {
+    // Jika belum login, selalu tampilkan halaman Login
+    if (!isLoggedIn) {
+        return <LoginPage onLoginSuccess={handleLoginSuccess} />;
+    }
+    
     switch (currentPage) {
       case 'home':
         return <DashboardKonsumen />;
       case 'tentang':
         return <TentangEcoBurn />;
-      case 'login':
-        return <LoginPage onLogin={handleLogin} />;
+      // Case 'login' sudah tidak perlu, karena logic ada di atas (if (!isLoggedIn))
       case 'dashboard-admin':
         return <DashboardAdmin />;
       case 'anggota':
@@ -78,9 +81,21 @@ export default function App() {
       case 'profil':
         return <ProfilAdmin profile={adminProfile} setProfile={setAdminProfile} showToast={showToast} />;
       default:
-        return <DashboardKonsumen />;
+        return <DashboardAdmin />; // Default ke dashboard admin jika sudah login
     }
   };
+
+  // Cek status login saat awal render (misalnya dari token di localStorage)
+  // Anda bisa menambahkan logic di sini jika ingin persistensi status login
+  /*
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+        setIsLoggedIn(true);
+        setCurrentPage('dashboard-admin');
+    }
+  }, []);
+  */
 
   return (
     <div className="min-h-screen bg-[#F4F8F5]">
